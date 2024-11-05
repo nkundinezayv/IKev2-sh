@@ -311,3 +311,5 @@ ${VPNUSERNAME} : EAP \"${VPNPASSWORD}\"
 " > /etc/ipsec.secrets
 
 ipsec restart
+
+EOF
