@@ -319,6 +319,44 @@ echo
 timedatectl set-timezone "${TZONE}"
 /usr/sbin/update-locale LANG=en_GB.UTF-8
 
+
+sed -r \
+-e "s/^myhostname =.*$/myhostname = ${VPNHOST}/" \
+-e 's/^inet_interfaces =.*$/inet_interfaces = loopback-only/' \
+-i.original /etc/postfix/main.cf
+
+grep -Fq 'jawj/IKEv2-setup' /etc/aliases || echo "
+# https://github.com/jawj/IKEv2-setup
+root: ${EMAILADDR}
+${LOGINUSERNAME}: ${EMAILADDR}
+" >> /etc/aliases
+
+newaliases
+service postfix restart
+
+
+sed -r \
+-e 's|^//Unattended-Upgrade::MinimalSteps "true";$|Unattended-Upgrade::MinimalSteps "true";|' \
+-e 's|^//Unattended-Upgrade::Mail "root";$|Unattended-Upgrade::Mail "root";|' \
+-e 's|^//Unattended-Upgrade::Automatic-Reboot "false";$|Unattended-Upgrade::Automatic-Reboot "true";|' \
+-e 's|^//Unattended-Upgrade::Remove-Unused-Dependencies "false";|Unattended-Upgrade::Remove-Unused-Dependencies "true";|' \
+-e 's|^//Unattended-Upgrade::Automatic-Reboot-Time "02:00";$|Unattended-Upgrade::Automatic-Reboot-Time "03:00";|' \
+-i /etc/apt/apt.conf.d/50unattended-upgrades
+
+echo 'APT::Periodic::Update-Package-Lists "1";
+APT::Periodic::Download-Upgradeable-Packages "1";
+APT::Periodic::AutocleanInterval "7";
+APT::Periodic::Unattended-Upgrade "1";
+' > /etc/apt/apt.conf.d/10periodic
+
+service unattended-upgrades restart
+
+echo
+echo "--- Creating configuration files ---"
+echo
+
+cd "/home/${LOGINUSERNAME}"
+
 cat << EOF > vpn-ios.mobileconfig
 <?xml version='1.0' encoding='UTF-8'?>
 <!DOCTYPE plist PUBLIC '-//Apple//DTD PLIST 1.0//EN' 'http://www.apple.com/DTDs/PropertyList-1.0.dtd'>
@@ -704,4 +742,3 @@ echo "Connection instructions have been emailed to you, and can also be found in
 # necessary for IKEv2?
 # Windows: https://support.microsoft.com/en-us/kb/926179
 # HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\PolicyAgent += AssumeUDPEncapsulationContextOnSendRule, DWORD = 2
-EOF
