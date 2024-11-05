@@ -312,6 +312,42 @@ ${VPNUSERNAME} : EAP \"${VPNPASSWORD}\"
 
 ipsec restart
 
+
+echo
+echo "--- User ---"
+echo
+
+# user + SSH
+
+id -u "${LOGINUSERNAME}" &>/dev/null || adduser --disabled-password --gecos "" "${LOGINUSERNAME}"
+echo "${LOGINUSERNAME}:${LOGINPASSWORD}" | chpasswd
+adduser "${LOGINUSERNAME}" sudo
+
+sed -r \
+-e "s/^#?Port 22$/Port ${SSHPORT}/" \
+-e 's/^#?LoginGraceTime (120|2m)$/LoginGraceTime 30/' \
+-e 's/^#?PermitRootLogin yes$/PermitRootLogin no/' \
+-e 's/^#?X11Forwarding yes$/X11Forwarding no/' \
+-e 's/^#?UsePAM yes$/UsePAM no/' \
+-i.original /etc/ssh/sshd_config
+
+if [[ $CERTLOGIN = "y" ]]; then
+  mkdir -p "/home/${LOGINUSERNAME}/.ssh"
+  chown "${LOGINUSERNAME}" "/home/${LOGINUSERNAME}/.ssh"
+  chmod 700 "/home/${LOGINUSERNAME}/.ssh"
+
+  cp "/root/.ssh/authorized_keys" "/home/${LOGINUSERNAME}/.ssh/authorized_keys"
+  chown "${LOGINUSERNAME}" "/home/${LOGINUSERNAME}/.ssh/authorized_keys"
+  chmod 600 "/home/${LOGINUSERNAME}/.ssh/authorized_keys"
+
+  sed -r \
+  -e "s/^#?PasswordAuthentication yes$/PasswordAuthentication no/" \
+  -i.allows_pwd /etc/ssh/sshd_config
+fi
+
+service ssh restart
+
+
 echo
 echo "--- Timezone, mail, unattended upgrades ---"
 echo
