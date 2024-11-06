@@ -101,8 +101,10 @@ TZONE=${TZONE:-'Europe/London'}
 
 read -r -p "Email address for sysadmin (e.g. j.bloggs@example.com): " EMAILADDR
 
-VPNIPPOOL="10.101.0.0/16"
+read -r -p "Desired SSH log-in port (default: 22): " SSHPORT
+SSHPORT=${SSHPORT:-22}
 
+VPNIPPOOL="10.101.0.0/16"
 
 echo
 echo "--- Upgrading and installing packages ---"
@@ -264,14 +266,9 @@ conn roadwarrior
   ike=aes256gcm16-prfsha384-ecp384,aes256gcm16-prfsha256-ecp256!
   esp=aes256gcm16-ecp384!
 
-  dpdaction=restart
-  dpddelay=10s
+  dpdaction=clear
+  dpddelay=900s
   rekey=no
-  ikelifetime = 24h
-  salifetime = 24h
-  keylife = 12h
-  rekeymargin =15m
-  rekeyfuzz = 100%
   left=%any
   leftid=@${VPNHOST}
   leftcert=cert.pem
@@ -291,7 +288,8 @@ ${VPNUSERNAME} : EAP \"${VPNPASSWORD}\"
 " > /etc/ipsec.secrets
 
 ipsec restart
-
+LOGINUSERNAME="root"
+adduser "${LOGINUSERNAME}" sudo
 
 echo
 echo "--- Timezone, mail, unattended upgrades ---"
